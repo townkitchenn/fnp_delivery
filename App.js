@@ -12,6 +12,7 @@ import DeliveryBoyScreen from "./screens/DeliveryBoyScreen";
 import PickItemScreen from "./screens/PickItemScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import DeliveryBoysListScreen from "./screens/DeliveryBoysListScreen";
+import AssignDeliveryBoyScreen from "./screens/AssignDeliveryBoyScreen";
 import { COLORS } from "./styles/globalStyles";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -49,6 +50,10 @@ const Navigation = () => {
             <Stack.Screen
               name="DeliveryBoysList"
               component={DeliveryBoysListScreen}
+            />
+            <Stack.Screen
+              name="AssignDeliveryBoy"
+              component={AssignDeliveryBoyScreen}
             />
           </>
         )}

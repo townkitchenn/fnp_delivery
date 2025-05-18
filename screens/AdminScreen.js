@@ -45,7 +45,13 @@ const AdminScreen = ({ navigation }) => {
   }, []);
 
   const renderItem = ({ item }) => (
-    <View style={[globalStyles.card, styles.itemCard]}>
+    <TouchableOpacity
+      onPress={() =>
+        item.status === "Pending" &&
+        navigation.navigate("AssignDeliveryBoy", { item })
+      }
+      style={[globalStyles.card, styles.itemCard]}
+    >
       <View style={styles.itemHeader}>
         <Text style={styles.itemName}>{item.name}</Text>
         {item.status && (
@@ -80,7 +86,7 @@ const AdminScreen = ({ navigation }) => {
           <Text style={styles.value}>{item.delivery_boy_name}</Text>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   return (
