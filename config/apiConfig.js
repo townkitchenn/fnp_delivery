@@ -1,5 +1,5 @@
 // Use your computer's IP address instead of localhost
-export const API_BASE_URL = "http://192.168.1.105:3000/api"; // Replace X with your IP's last digit
+export const API_BASE_URL = "http://65.1.25.140:3000/api"; // Replace X with your IP's last digit
 
 export const ENDPOINTS = {
   LOGIN: "/login",

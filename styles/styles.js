@@ -247,4 +247,15 @@ export default StyleSheet.create({
     width: "auto",
     alignSelf: "center",
   },
+
+  // Logo Styles
+  logo: {
+    width: 120,
+    height: 120,
+    resizeMode: "contain",
+    marginBottom: 40,
+    alignSelf: "center",
+    borderRadius: 60, // Makes it circular
+    backgroundColor: COLORS.white,
+  },
 });

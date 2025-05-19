@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, TextInput, TouchableOpacity, Text, Alert } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  Alert,
+  Image,
+} from "react-native";
 import { registerUser } from "../services/api";
 import styles from "../styles/styles";
 
@@ -52,6 +59,7 @@ const RegisterScreen = ({ navigation }) => {
   return (
     <View style={styles.authContainer}>
       <View style={styles.authCard}>
+        <Image source={require("../assets/icon.png")} style={styles.logo} />
         <Text style={styles.authTitle}>Register</Text>
         <TextInput
           style={styles.input}

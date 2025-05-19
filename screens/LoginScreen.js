@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, TextInput, TouchableOpacity, Text, Alert } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  Alert,
+  Image,
+} from "react-native";
 import { loginUser } from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../context/AuthContext";
@@ -32,6 +39,7 @@ const LoginScreen = ({ navigation }) => {
   return (
     <View style={styles.authContainer}>
       <View style={styles.authCard}>
+        <Image source={require("../assets/icon.png")} style={styles.logo} />
         <Text style={styles.authTitle}>Login</Text>
         <TextInput
           style={styles.input}
