@@ -106,9 +106,7 @@ const DeliveryBoyScreen = ({ navigation }) => {
 
       <View style={styles.detailRow}>
         <Text style={styles.label}>Delivery Time:</Text>
-        <Text style={styles.value}>
-          {new Date(item.delivery_time).toLocaleString()}
-        </Text>
+        <Text style={styles.value}>{item.delivery_time}</Text>
       </View>
 
       <View style={styles.detailRow}>
