@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "fnp-delivery",
+    "name": "PNGFS",
     "slug": "fnp-delivery",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,14 +16,25 @@
       "supportsTablet": true
     },
     "android": {
+      "config": {
+        "usesCleartextTraffic": true
+      },
+      "versionCode": 2,
+      "permissions": ["INTERNET"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.pramod_samson_maben.fnpdelivery"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ad98d1a2-5c4f-4dfd-b4b3-526df525f1fd"
+      }
     }
   }
 }
