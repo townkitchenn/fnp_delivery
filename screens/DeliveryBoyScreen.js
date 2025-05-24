@@ -2,269 +2,177 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
-  Alert,
   StyleSheet,
+  ScrollView,
   RefreshControl,
 } from "react-native";
-import {
-  getDeliveryBoyItems,
-  updateItemStatus as updateItemStatusAPI,
-} from "../services/api";
-import { globalStyles, COLORS } from "../styles/globalStyles";
-import { useAuth } from "../context/AuthContext";
 import { FontAwesome } from "@expo/vector-icons";
+import { globalStyles, COLORS } from "../styles/globalStyles";
+import { formatStatus } from "../utils/formatters";
+import { getDeliveryBoyStatusCounts } from "../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useFocusEffect } from "@react-navigation/native";
 
 const DeliveryBoyScreen = ({ navigation }) => {
-  const { signOut } = useAuth();
-  const [pickedItems, setPickedItems] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchItems();
-    }, [])
-  );
-
-  const fetchItems = async () => {
+  const fetchStatusCounts = async () => {
     try {
-      const items = await getDeliveryBoyItems();
-      setPickedItems(items);
+      const userId = await AsyncStorage.getItem("userId");
+      const data = await getDeliveryBoyStatusCounts(userId);
+      setStatusCounts(data);
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch items");
+      console.error("Error fetching counts:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getNextStatus = (currentStatus) => {
-    switch (currentStatus) {
-      case "Assigned":
-        return "Picked";
-      case "Picked":
-        return "Delivered";
-      default:
-        return currentStatus;
-    }
-  };
-
-  const getButtonText = (status) => {
-    switch (status) {
-      case "Assigned":
-        return "Mark Picked";
-      case "Picked":
-        return "Mark Delivered";
-      default:
-        return "Updated";
-    }
-  };
-
-  const showConfirmation = (item) => {
-    const nextStatus = getNextStatus(item.status);
-    Alert.alert(
-      "Confirm Status Update",
-      `Are you sure you want to mark this item as ${nextStatus}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes",
-          onPress: () => updateItemStatus(item.id, nextStatus),
-        },
-      ]
-    );
-  };
-
-  const updateItemStatus = async (itemId, newStatus) => {
-    try {
-      await updateItemStatusAPI(itemId, newStatus);
-      await fetchItems(); // Refresh the list after update
-    } catch (error) {
-      Alert.alert("Error", "Failed to update status");
+      setRefreshing(false);
     }
   };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    fetchItems().finally(() => setRefreshing(false));
+    fetchStatusCounts();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={[globalStyles.card, styles.itemCard]}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <View style={[styles.statusBadge, styles[item.status.toLowerCase()]]}>
-          <Text style={styles.statusText}>{item.status}</Text>
-        </View>
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={styles.label}>Delivery Time:</Text>
-        <Text style={styles.value}>{item.delivery_time}</Text>
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={styles.label}>Address:</Text>
-        <Text style={styles.value}>{item.address}</Text>
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={styles.label}>Customer:</Text>
-        <Text style={styles.value}>{item.customer_number}</Text>
-      </View>
-
-      {item.status !== "Delivered" && (
-        <View style={styles.actionContainer}>
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles[`${item.status.toLowerCase()}Button`],
-            ]}
-            onPress={() => showConfirmation(item)}
-          >
-            <Text style={styles.actionButtonText}>
-              {getButtonText(item.status)}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchStatusCounts();
+    }, [])
   );
+
+  const categories = [
+    { id: 1, status: "Assigned", icon: "user", color: COLORS.primaryLight },
+    { id: 2, status: "Picked", icon: "check", color: COLORS.primary },
+    { id: 3, status: "Out_For_Delivery", icon: "truck", color: "#4CAF50" },
+    {
+      id: 4,
+      status: "Delivery_Attempted",
+      icon: "repeat",
+      color: "#FF5722",
+    },
+    { id: 5, status: "Delivered", icon: "check-circle", color: COLORS.success },
+  ].map((cat) => ({
+    ...cat,
+    displayText: formatStatus(cat.status),
+  }));
 
   return (
     <View style={globalStyles.screenContainer}>
-      <View style={[globalStyles.header, styles.header]}>
-        <Text style={globalStyles.headerText}>My Deliveries</Text>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate("Profile")}
-        >
-          <FontAwesome name="user-circle" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <View style={[globalStyles.header, styles.header]}>
+            <Text style={globalStyles.headerText}>My Deliveries</Text>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => navigation.navigate("Profile")}
+            >
+              <FontAwesome name="user-circle" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
-      <FlatList
-        data={pickedItems}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+          <ScrollView
+            contentContainerStyle={styles.categoriesContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[COLORS.primary]}
+                tintColor={COLORS.primary}
+              />
+            }
+          >
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryCard,
+                  { backgroundColor: category.color },
+                ]}
+                onPress={() =>
+                  navigation.navigate("AdminItemList", {
+                    status: category.status,
+                    isDeliveryBoy: true,
+                  })
+                }
+              >
+                <FontAwesome name={category.icon} size={24} color="white" />
+                <Text style={styles.categoryText}>
+                  {category.displayText || category.status}
+                </Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countText}>
+                    {statusCounts[category.status] || 0}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  listContainer: {
-    padding: 16,
-  },
-  itemCard: {
-    marginBottom: 16,
-  },
-  itemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  itemName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.textDark,
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  picked: {
-    backgroundColor: COLORS.pending,
-  },
-  delivered: {
-    backgroundColor: COLORS.success,
-  },
-  statusText: {
-    color: COLORS.white,
-    fontWeight: "500",
-    fontSize: 12,
-  },
-  detailRow: {
-    flexDirection: "row",
-    marginBottom: 8,
-  },
-  label: {
-    width: 100,
-    fontSize: 14,
-    color: COLORS.textLight,
-    fontWeight: "500",
-  },
-  value: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  actionContainer: {
-    flexDirection: "row",
-    justifyContent: "center", // Changed to center
-    marginTop: 12,
-  },
-  actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    minWidth: 120,
-    alignItems: "center",
-    backgroundColor: COLORS.primary, // Use primary color for all action buttons
-  },
-  actionButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  addButton: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: COLORS.primary,
-    fontWeight: "bold",
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerButtons: {
+  categoriesContainer: {
+    padding: 16,
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  categoryCard: {
+    width: "47%",
+    aspectRatio: 1,
+    borderRadius: 20,
+    padding: 20,
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  categoryText: {
+    color: "white",
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
   profileButton: {
     padding: 8,
     marginLeft: 8,
   },
-  profileIcon: {
-    fontSize: 24,
-    color: COLORS.white,
+  countBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  logoutButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: COLORS.white,
-  },
-  logoutButtonText: {
-    color: COLORS.white,
+  countText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
 

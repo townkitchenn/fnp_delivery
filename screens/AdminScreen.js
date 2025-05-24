@@ -2,206 +2,179 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  ScrollView,
   RefreshControl,
 } from "react-native";
-import { getAllItems } from "../services/api";
-import { globalStyles, COLORS } from "../styles/globalStyles";
 import { FontAwesome } from "@expo/vector-icons";
+import { globalStyles, COLORS } from "../styles/globalStyles";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { getStatusCounts } from "../services/api";
+import { API_BASE_URL } from "../config/apiConfig";
 import { useFocusEffect } from "@react-navigation/native";
 
 const AdminScreen = ({ navigation }) => {
-  const [items, setItems] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchItems();
-    }, [])
-  );
-
-  const fetchItems = async () => {
+  const fetchStatusCounts = async () => {
     try {
-      const data = await getAllItems();
-      setItems(data);
+      const data = await getStatusCounts();
+      setStatusCounts(data);
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch items");
+      console.error("Error fetching counts:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    fetchItems().finally(() => setRefreshing(false));
+    fetchStatusCounts();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() =>
-        item.status === "Pending" &&
-        navigation.navigate("AssignDeliveryBoy", { item })
-      }
-      style={[globalStyles.card, styles.itemCard]}
-    >
-      <View style={styles.itemHeader}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        {item.status && (
-          <View style={[styles.statusBadge, styles[item.status.toLowerCase()]]}>
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={styles.label}>Address:</Text>
-        <Text style={styles.value}>{item.address}</Text>
-      </View>
-
-      {item.delivery_time && (
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Delivery Time:</Text>
-          <Text style={styles.value}>{item.delivery_time}</Text>
-        </View>
-      )}
-
-      {item.customer_number && (
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Customer:</Text>
-          <Text style={styles.value}>{item.customer_number}</Text>
-        </View>
-      )}
-
-      {item.delivery_boy_name && (
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>Delivery Boy:</Text>
-          <Text style={styles.value}>{item.delivery_boy_name}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchStatusCounts();
+    }, [])
   );
+
+  const categories = [
+    { id: 1, status: "Pending", icon: "clock-o", color: "#FFA500" },
+    { id: 2, status: "Assigned", icon: "user", color: COLORS.primaryLight },
+    { id: 3, status: "Picked", icon: "check", color: COLORS.primary },
+    {
+      id: 4,
+      status: "Out_For_Delivery",
+      icon: "truck",
+      color: "#4CAF50",
+      displayText: "Out for Delivery",
+    },
+    {
+      id: 5,
+      status: "Delivery_Attempted",
+      icon: "repeat",
+      color: "#FF5722",
+      displayText: "Attempted Delivery",
+    },
+    { id: 6, status: "Delivered", icon: "check-circle", color: COLORS.success },
+  ];
 
   return (
     <View style={globalStyles.screenContainer}>
-      <View style={[globalStyles.header, styles.header]}>
-        <Text style={globalStyles.headerText}>Admin View</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => navigation.navigate("Profile")}
-          >
-            <FontAwesome name="user-circle" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <View style={[globalStyles.header, styles.header]}>
+            <Text style={globalStyles.headerText}>Admin Dashboard</Text>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => navigation.navigate("Profile")}
+            >
+              <FontAwesome name="user-circle" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
-      <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+          <ScrollView
+            contentContainerStyle={styles.categoriesContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[COLORS.primary]}
+                tintColor={COLORS.primary}
+              />
+            }
+          >
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryCard,
+                  { backgroundColor: category.color },
+                ]}
+                onPress={() =>
+                  navigation.navigate("AdminItemList", {
+                    status: category.status,
+                  })
+                }
+              >
+                <FontAwesome name={category.icon} size={24} color="white" />
+                <Text style={styles.categoryText}>
+                  {category.displayText || category.status}
+                </Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countText}>
+                    {statusCounts[category.status] || 0}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  listContainer: {
-    padding: 16,
-  },
-  itemCard: {
-    marginBottom: 16,
-  },
-  itemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  itemName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.textDark,
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  pending: {
-    backgroundColor: "#FFA500",
-    borderRadius: 20,
-  },
-  assigned: {
-    backgroundColor: COLORS.primaryLight,
-  },
-  picked: {
-    backgroundColor: COLORS.primary,
-  },
-  delivered: {
-    backgroundColor: COLORS.success,
-  },
-  Pending: {
-    backgroundColor: "#FFA500",
-    borderRadius: 20,
-  },
-  statusText: {
-    color: COLORS.white,
-    fontWeight: "500",
-    fontSize: 12,
-  },
-  detailRow: {
-    flexDirection: "row",
-    marginBottom: 8,
-  },
-  label: {
-    width: 100,
-    fontSize: 14,
-    color: COLORS.textLight,
-    fontWeight: "500",
-  },
-  value: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  addButton: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: COLORS.primary,
-    fontWeight: "bold",
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerButtons: {
+  categoriesContainer: {
+    padding: 16,
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  categoryCard: {
+    width: "47%",
+    aspectRatio: 1,
+    borderRadius: 20,
+    padding: 20,
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  categoryText: {
+    color: "white",
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
   profileButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  countBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  countText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
 

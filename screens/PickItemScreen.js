@@ -12,6 +12,8 @@ import { getPendingItems, assignItem } from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { globalStyles, COLORS } from "../styles/globalStyles";
 import { useFocusEffect } from "@react-navigation/native";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmptyListMessage from "../components/EmptyListMessage";
 
 const PickItemScreen = ({ navigation }) => {
   const [pendingItems, setPendingItems] = useState([]);
@@ -40,22 +42,26 @@ const PickItemScreen = ({ navigation }) => {
   };
 
   const handlePickItem = async (item) => {
-    Alert.alert("Confirm Pick", `Are you sure you want to pick ${item.name}?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Yes",
-        onPress: async () => {
-          try {
-            const userId = await AsyncStorage.getItem("userId");
-            await assignItem(item.id, userId);
-            setPendingItems(pendingItems.filter((i) => i.id !== item.id));
-            navigation.goBack();
-          } catch (error) {
-            Alert.alert("Error", "Failed to assign item");
-          }
+    Alert.alert(
+      "Confirm Pick",
+      `Are you sure you want to assign ${item.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              const userId = await AsyncStorage.getItem("userId");
+              await assignItem(item.id, userId);
+              setPendingItems(pendingItems.filter((i) => i.id !== item.id));
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert("Error", "Failed to assign item");
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const onRefresh = React.useCallback(() => {
@@ -77,9 +83,7 @@ const PickItemScreen = ({ navigation }) => {
       {item.delivery_time && (
         <View style={styles.detailRow}>
           <Text style={styles.label}>Delivery Time:</Text>
-          <Text style={styles.value}>
-            {new Date(item.delivery_time).toLocaleString()}
-          </Text>
+          <Text style={styles.value}>{item.delivery_time}</Text>
         </View>
       )}
 
@@ -103,32 +107,45 @@ const PickItemScreen = ({ navigation }) => {
 
   return (
     <View style={globalStyles.screenContainer}>
-      <View style={[globalStyles.header, styles.header]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Item List</Text>
-        </View>
-      </View>
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <View style={[globalStyles.header, styles.header]}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.backButtonText}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.headerText}>Item List</Text>
+            </View>
+          </View>
 
-      <FlatList
-        data={pendingItems}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[COLORS.primary]} // Android
-            tintColor={COLORS.primary} // iOS
-          />
-        }
-      />
+          {pendingItems.length === 0 ? (
+            <EmptyListMessage
+              message="No pending items available"
+              icon="inbox"
+            />
+          ) : (
+            <FlatList
+              data={pendingItems}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.listContainer}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[COLORS.primary]} // Android
+                  tintColor={COLORS.primary} // iOS
+                />
+              }
+            />
+          )}
+        </>
+      )}
     </View>
   );
 };

@@ -11,6 +11,8 @@ import {
 import { getDeliveryBoys } from "../services/api";
 import { globalStyles, COLORS } from "../styles/globalStyles";
 import { FontAwesome } from "@expo/vector-icons";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmptyListMessage from "../components/EmptyListMessage";
 
 const DeliveryBoysListScreen = ({ navigation }) => {
   const [deliveryBoys, setDeliveryBoys] = useState([]);
@@ -45,33 +47,69 @@ const DeliveryBoysListScreen = ({ navigation }) => {
           <Text style={styles.userName}>{item.username}</Text>
           <Text style={styles.phoneNumber}>{item.phone_number}</Text>
         </View>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor:
+                item.current_delivery?.status === "Assigned"
+                  ? COLORS.error
+                  : COLORS.success,
+            },
+          ]}
+        >
+          <Text style={styles.statusText}>
+            {item.current_delivery?.status || "Idle"}
+          </Text>
+        </View>
       </View>
+      {item.current_delivery?.itemName && (
+        <View style={styles.currentDelivery}>
+          <FontAwesome name="cube" size={14} color={COLORS.textLight} />
+          <Text style={styles.currentItemText}>
+            Delivering: {item.current_delivery.itemName}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
   return (
     <View style={globalStyles.screenContainer}>
-      <View style={[globalStyles.header, styles.header]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Delivery Boys</Text>
-        </View>
-      </View>
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <View style={[globalStyles.header, styles.header]}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.backButtonText}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.headerText}>Delivery Boys</Text>
+            </View>
+          </View>
 
-      <FlatList
-        data={deliveryBoys}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+          {deliveryBoys.length === 0 ? (
+            <EmptyListMessage
+              message="No delivery boys available"
+              icon="users"
+            />
+          ) : (
+            <FlatList
+              data={deliveryBoys}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+            />
+          )}
+        </>
+      )}
     </View>
   );
 };
@@ -107,19 +145,35 @@ const styles = StyleSheet.create({
   itemHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   userInfo: {
+    flex: 1,
     marginLeft: 16,
   },
-  userName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.textDark,
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 8,
   },
-  phoneNumber: {
-    fontSize: 14,
+  statusText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  currentDelivery: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  currentItemText: {
+    marginLeft: 8,
     color: COLORS.textLight,
-    marginTop: 4,
+    fontSize: 14,
   },
 });
 

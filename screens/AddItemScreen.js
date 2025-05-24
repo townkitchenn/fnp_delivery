@@ -1,3 +1,4 @@
+// AddItemScreen.js
 import React, { useState } from "react";
 import {
   View,
@@ -8,83 +9,173 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  Image, // Required for displaying selected image
 } from "react-native";
-import { createItem } from "../services/api";
+import { createItem, updateItem } from "../services/api"; // Adjust import path as per your project structure
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { COLORS } from "../config/colors";
+import { COLORS } from "../config/colors"; // Adjust import path as per your project structure
+import * as ImagePicker from "expo-image-picker"; // For image picking functionality
+import { FontAwesome } from "@expo/vector-icons"; // For camera icon
+import { compressImage } from "../utils/imageUtils";
 
-const AddItemScreen = ({ navigation }) => {
+const AddItemScreen = ({ route, navigation }) => {
+  const editItem = route.params?.item;
+  const isEditMode = route.params?.mode === "edit";
+
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    address: "",
-    customer_number: "",
-    delivery_time: null, // Changed to null initially
+    name: editItem?.name || "",
+    description: editItem?.description || "",
+    address: editItem?.address || "",
+    customer_number: editItem?.customer_number || "",
+    alternative_number: editItem?.alternative_number || "",
+    delivery_time: editItem?.delivery_time || null,
+    location: editItem?.location || "",
   });
-  const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [fromTime, setFromTime] = useState(null);
+  const [toTime, setToTime] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showFromTimePicker, setShowFromTimePicker] = useState(false);
+  const [showToTimePicker, setShowToTimePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [imageUri, setImageUri] = useState(editItem?.image_url || null); // Stores the URI of the selected image
 
+  // Handlers for Date and Time Pickers
   const onDateChange = (event, selected) => {
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-    }
+    if (Platform.OS === "android") setShowDatePicker(false);
     if (event.type === "set" && selected) {
       setSelectedDate(selected);
-      if (Platform.OS === "android") {
-        setShowTimePicker(true);
-      }
+      if (Platform.OS === "android") setShowFromTimePicker(true); // Auto-open from time picker on Android
     }
   };
 
-  const onTimeChange = (event, selected) => {
-    if (Platform.OS === "android") {
-      setShowTimePicker(false);
-    }
+  const onFromTimeChange = (event, selected) => {
+    if (Platform.OS === "android") setShowFromTimePicker(false);
     if (event.type === "set" && selected) {
-      const finalDateTime = new Date(selected);
-      if (selectedDate) {
-        finalDateTime.setFullYear(selectedDate.getFullYear());
-        finalDateTime.setMonth(selectedDate.getMonth());
-        finalDateTime.setDate(selectedDate.getDate());
-      }
-      setFormData({ ...formData, delivery_time: finalDateTime });
+      setFromTime(selected);
+      // Update the formData with the formatted delivery_time as soon as 'from' time is set
+      const formatted = formatTimeRange(selectedDate, selected, toTime); // Pass toTime as well
+      setFormData((prev) => ({ ...prev, delivery_time: formatted }));
     }
   };
 
-  const formatDateTime = (date) => {
-    if (!date) return "";
-    return date.toLocaleString("en-US", {
-      year: "numeric",
+  const onToTimeChange = (event, selected) => {
+    if (Platform.OS === "android") setShowToTimePicker(false);
+    if (event.type === "set" && selected) {
+      setToTime(selected);
+      // Update the formData with the formatted delivery_time including 'to' time
+      const formatted = formatTimeRange(selectedDate, fromTime, selected);
+      setFormData((prev) => ({ ...prev, delivery_time: formatted }));
+    }
+  };
+
+  // Helper function to format the delivery time string
+  const formatTimeRange = (date, fromTime, toTime = null) => {
+    if (!date || !fromTime) return "";
+
+    const formatTime = (timeDate) => {
+      return timeDate.toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true, // For AM/PM format
+      });
+    };
+
+    const formattedDate = date.toLocaleString("en-US", {
       month: "short",
       day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
+      year: "numeric",
     });
+
+    return toTime
+      ? `${formattedDate}, ${formatTime(fromTime)} - ${formatTime(toTime)}`
+      : `${formattedDate}, ${formatTime(fromTime)}`;
   };
 
-  const handleAddItem = async () => {
-    if (!formData.name || !formData.address) {
-      Alert.alert("Error", "Please fill name and address fields");
+  // Logic for opening date/time pickers
+  const handleTimePress = () => {
+    if (!selectedDate) {
+      setShowDatePicker(true);
+    } else if (!fromTime) {
+      setShowFromTimePicker(true);
+    } else {
+      setShowToTimePicker(true);
+    }
+  };
+
+  // Image picking functionality
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const compressed = await compressImage(result.assets[0].uri);
+        setImageUri(compressed.uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async () => {
+    const trimmedName = formData.name.trim();
+    const trimmedAddress = formData.address.trim();
+
+    if (trimmedName.length === 0 || trimmedAddress.length === 0) {
+      Alert.alert("Error", "Please fill name and address fields.");
       return;
     }
 
     setLoading(true);
     try {
-      const payload = {
-        ...formData,
-        delivery_time: formatDateTime(formData.delivery_time),
-      };
+      const formDataToSend = new FormData();
 
-      console.log(payload);
-      await createItem(payload);
-      Alert.alert("Success", "Item added successfully", [
-        { text: "OK", onPress: () => navigation.goBack() },
-      ]);
+      // Add all form fields except image first
+      Object.keys(formData).forEach((key) => {
+        if (formData[key] !== null && formData[key] !== undefined) {
+          formDataToSend.append(key, String(formData[key]).trim());
+        }
+      });
+
+      // Handle image separately
+      if (imageUri && !imageUri.startsWith("http")) {
+        const imageUriParts = imageUri.split(".");
+        const fileType = imageUriParts[imageUriParts.length - 1];
+        const fileName = `item_image_${Date.now()}.${fileType}`;
+
+        formDataToSend.append("image", {
+          uri: imageUri,
+          type: `image/${fileType}`,
+          name: fileName,
+        });
+      }
+
+      console.log("Submitting form data:", formDataToSend._parts);
+
+      if (isEditMode) {
+        console.log("data", formDataToSend);
+        await updateItem(editItem.id, formDataToSend);
+        Alert.alert("Success", "Item updated successfully", [
+          { text: "OK", onPress: () => navigation.pop(2) },
+        ]);
+      } else {
+        await createItem(formDataToSend);
+        Alert.alert("Success", "Item added successfully", [
+          { text: "OK", onPress: () => navigation.goBack() },
+        ]);
+      }
     } catch (error) {
-      Alert.alert("Error", error.message);
+      console.error("Form submission error:", error);
+      Alert.alert(
+        "Error",
+        error.message || `Failed to ${isEditMode ? "update" : "add"} item`
+      );
     } finally {
       setLoading(false);
     }
@@ -99,7 +190,9 @@ const AddItemScreen = ({ navigation }) => {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerText}>Add New Item</Text>
+        <Text style={styles.headerText}>
+          {isEditMode ? "Edit Item" : "Add New Item"}
+        </Text>
       </View>
 
       <ScrollView
@@ -144,6 +237,18 @@ const AddItemScreen = ({ navigation }) => {
           />
         </View>
         <View style={styles.inputGroup}>
+          <Text style={styles.label}>Location</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter location"
+            placeholderTextColor={COLORS.textLight}
+            value={formData.location}
+            onChangeText={(text) =>
+              setFormData({ ...formData, location: text })
+            }
+          />
+        </View>
+        <View style={styles.inputGroup}>
           <Text style={styles.label}>Customer Number</Text>
           <TextInput
             style={styles.input}
@@ -153,14 +258,27 @@ const AddItemScreen = ({ navigation }) => {
             onChangeText={(text) =>
               setFormData({ ...formData, customer_number: text })
             }
-            keyboardType="numeric"
+            keyboardType="numeric" // Ensure numeric keyboard
+          />
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Alternative Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter alternative number (optional)"
+            placeholderTextColor={COLORS.textLight}
+            value={formData.alternative_number}
+            onChangeText={(text) =>
+              setFormData({ ...formData, alternative_number: text })
+            }
+            keyboardType="numeric" // Ensure numeric keyboard
           />
         </View>
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Delivery Time</Text>
           <TouchableOpacity
             style={styles.datePickerButton}
-            onPress={() => setShowDatePicker(true)}
+            onPress={handleTimePress}
           >
             <Text
               style={[
@@ -168,13 +286,12 @@ const AddItemScreen = ({ navigation }) => {
                 !formData.delivery_time && styles.placeholderText,
               ]}
             >
-              {formData.delivery_time
-                ? formatDateTime(formData.delivery_time)
-                : "Select delivery date and time"}
+              {formData.delivery_time || "Select delivery date and time"}
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Date and Time Pickers */}
         {showDatePicker && (
           <DateTimePicker
             testID="datePicker"
@@ -183,28 +300,60 @@ const AddItemScreen = ({ navigation }) => {
             is24Hour={true}
             display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={onDateChange}
-            minimumDate={new Date()}
+            minimumDate={new Date()} // Prevent picking past dates
+          />
+        )}
+        {showFromTimePicker && (
+          <DateTimePicker
+            testID="fromTimePicker"
+            value={fromTime || new Date()}
+            mode="time"
+            is24Hour={false} // Use 12-hour format with AM/PM
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={onFromTimeChange}
+          />
+        )}
+        {showToTimePicker && (
+          <DateTimePicker
+            testID="toTimePicker"
+            value={toTime || new Date()}
+            mode="time"
+            is24Hour={false} // Use 12-hour format with AM/PM
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={onToTimeChange}
           />
         )}
 
-        {showTimePicker && (
-          <DateTimePicker
-            testID="timePicker"
-            value={selectedDate || new Date()}
-            mode="time"
-            is24Hour={false}
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={onTimeChange}
-          />
-        )}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Item Image</Text>
+          <TouchableOpacity
+            style={styles.imageUploadButton}
+            onPress={pickImage}
+          >
+            {imageUri ? (
+              // Display selected image preview
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            ) : (
+              // Placeholder for image upload
+              <View style={styles.uploadPlaceholder}>
+                <FontAwesome name="camera" size={24} color={COLORS.textLight} />
+                <Text style={styles.uploadText}>Upload Image</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.buttonDisabled]}
-          onPress={handleAddItem}
+          onPress={handleSubmit}
           disabled={loading}
         >
           <Text style={styles.submitButtonText}>
-            {loading ? "Saving..." : "Save"}
+            {loading ? "Saving..." : isEditMode ? "Update" : "Save"}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -263,11 +412,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     fontSize: 14,
-    height: 48, // Increased from 42
+    height: 48,
   },
   textArea: {
-    height: 90, // Increased from 80
-    textAlignVertical: "top",
+    height: 90,
+    textAlignVertical: "top", // For Android multiline TextInput
   },
   datePickerButton: {
     backgroundColor: COLORS.white,
@@ -275,10 +424,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-    height: 48, // Increased from 42
+    height: 48,
+    justifyContent: "center",
   },
   dateText: {
-    fontSize: 14, // Reduced from 16
+    fontSize: 14,
     color: COLORS.textDark,
   },
   submitButton: {
@@ -306,6 +456,43 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: COLORS.textLight,
+  },
+  imageUploadButton: {
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: "70%", // Make container smaller
+    aspectRatio: 1, // Force square container
+    alignSelf: "center", // Center the container
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain", // Ensure image fits within square
+  },
+  uploadPlaceholder: {
+    alignItems: "center",
+  },
+  uploadText: {
+    marginTop: 8,
+    color: COLORS.textLight,
+    fontSize: 14,
+  },
+  saveButton: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginLeft: "auto",
+  },
+  saveButtonText: {
+    color: COLORS.primary,
+    fontWeight: "600",
+    fontSize: 16,
   },
 });
 

@@ -8,6 +8,8 @@ export const ENDPOINTS = {
   UPDATE_ITEM_STATUS: (id) => `/delivery-items/${id}/status`,
   PENDING_ITEMS: "/delivery-items/pending",
   ASSIGN_ITEM: (id) => `/delivery-items/${id}/assign`,
+  UNASSIGN_ITEM: (id) => `/delivery-items/${id}/unassign`,
   ALL_ITEMS: "/delivery-items",
   CREATE_ITEM: "/delivery-items",
+  UPDATE_ITEM: (id) => `/delivery-items/${id}/edit`,
 };

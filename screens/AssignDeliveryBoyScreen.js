@@ -16,6 +16,8 @@ const AssignDeliveryBoyScreen = ({ route, navigation }) => {
   const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  console.log("item", item);
+
   useEffect(() => {
     fetchDeliveryBoys();
   }, []);
@@ -32,10 +34,16 @@ const AssignDeliveryBoyScreen = ({ route, navigation }) => {
   };
 
   const handleAssign = async (deliveryBoyId) => {
+    console.log("hi", item.id, deliveryBoyId);
     try {
       await assignItem(item.id, deliveryBoyId);
       Alert.alert("Success", "Item assigned successfully", [
-        { text: "OK", onPress: () => navigation.goBack() },
+        {
+          text: "OK",
+          onPress: () => {
+            navigation.pop(2); // Go back two screens
+          },
+        },
       ]);
     } catch (error) {
       Alert.alert("Error", "Failed to assign item");
