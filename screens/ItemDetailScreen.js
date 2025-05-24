@@ -21,6 +21,7 @@ import { unassignItem, deleteItem, updateItemStatus } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { formatStatus } from "../utils/formatters";
 import { compressImage } from "../utils/imageUtils";
+import { ensureHttps } from "../utils/urlUtils";
 
 const ItemDetailScreen = ({ route, navigation }) => {
   const { item } = route.params;
@@ -96,8 +97,9 @@ const ItemDetailScreen = ({ route, navigation }) => {
   };
 
   const getImageUrl = () => {
-    if (item.image_url) return item.image_url;
-    if (item.image_path) return `${API_BASE_URL}/${item.image_path}`;
+    if (item.image_url) return ensureHttps(item.image_url);
+    if (item.image_path)
+      return ensureHttps(`${API_BASE_URL}/${item.image_path}`);
     return null;
   };
 
@@ -533,7 +535,7 @@ const ItemDetailScreen = ({ route, navigation }) => {
             </View>
             <View style={styles.deliveredImageContainer}>
               <Image
-                source={{ uri: item.delivered_image_url }}
+                source={{ uri: ensureHttps(item.delivered_image_url) }}
                 style={styles.deliveredImage}
                 resizeMode="cover"
               />
