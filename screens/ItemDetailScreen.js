@@ -312,7 +312,6 @@ const ItemDetailScreen = ({ route, navigation }) => {
 
   const handleDownloadImage = async () => {
     try {
-      // Request permission
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -325,11 +324,12 @@ const ItemDetailScreen = ({ route, navigation }) => {
       if (item.delivered_image_url) {
         Alert.alert("Downloading...", "The image is being downloaded");
 
-        const filename = item.delivered_image_url.split("/").pop();
+        const secureUrl = ensureHttps(item.delivered_image_url);
+        const filename = secureUrl.split("/").pop();
         const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
         const downloadResult = await FileSystem.downloadAsync(
-          item.delivered_image_url,
+          secureUrl,
           fileUri
         );
 
