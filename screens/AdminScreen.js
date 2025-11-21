@@ -22,6 +22,7 @@ const AdminScreen = ({ navigation }) => {
   const fetchStatusCounts = async () => {
     try {
       const data = await getStatusCounts();
+      console.log("data", data);
       setStatusCounts(data);
     } catch (error) {
       console.error("Error fetching counts:", error);

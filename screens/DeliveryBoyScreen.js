@@ -20,10 +20,13 @@ const DeliveryBoyScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  console.log("test");
+
   const fetchStatusCounts = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
       const data = await getDeliveryBoyStatusCounts(userId);
+      console.log("data count", data);
       setStatusCounts(data);
     } catch (error) {
       console.error("Error fetching counts:", error);

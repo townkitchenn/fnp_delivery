@@ -165,6 +165,7 @@ const AddItemScreen = ({ route, navigation }) => {
           { text: "OK", onPress: () => navigation.pop(2) },
         ]);
       } else {
+        console.log("data", formDataToSend);
         await createItem(formDataToSend);
         Alert.alert("Success", "Item added successfully", [
           { text: "OK", onPress: () => navigation.goBack() },
@@ -335,7 +336,7 @@ const AddItemScreen = ({ route, navigation }) => {
               <Image
                 source={{ uri: imageUri }}
                 style={styles.previewImage}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             ) : (
               // Placeholder for image upload

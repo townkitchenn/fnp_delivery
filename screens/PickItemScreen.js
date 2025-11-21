@@ -7,6 +7,7 @@ import {
   Alert,
   StyleSheet,
   RefreshControl,
+  Image,
 } from "react-native";
 import { getPendingItems, assignItem } from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,6 +15,7 @@ import { globalStyles, COLORS } from "../styles/globalStyles";
 import { useFocusEffect } from "@react-navigation/native";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyListMessage from "../components/EmptyListMessage";
+import { getImageSource } from "../utils/imageUtils";
 
 const PickItemScreen = ({ navigation }) => {
   const [pendingItems, setPendingItems] = useState([]);
@@ -32,9 +34,11 @@ const PickItemScreen = ({ navigation }) => {
 
   const fetchPendingItems = async () => {
     try {
-      const items = await getPendingItems();
-      setPendingItems(items);
+      const data = await getPendingItems();
+      console.log("PickItemScreen - Pending items received:", data);
+      setPendingItems(data);
     } catch (error) {
+      console.error("Error fetching pending items:", error);
       Alert.alert("Error", "Failed to fetch pending items");
     } finally {
       setLoading(false);
@@ -74,6 +78,17 @@ const PickItemScreen = ({ navigation }) => {
       <View style={styles.itemHeader}>
         <Text style={styles.itemName}>{item.name}</Text>
       </View>
+
+      {/* {item.image_url && (
+        <View style={styles.imageContainer}>
+          {console.log("PickItemScreen - Image URL:", item.image_url)}
+          <Image
+            source={getImageSource(item.image_url)}
+            style={styles.itemImage}
+            resizeMode="cover"
+          />
+        </View>
+      )} */}
 
       <View style={styles.detailRow}>
         <Text style={styles.label}>Address:</Text>
@@ -156,6 +171,16 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     marginBottom: 16,
+  },
+  imageContainer: {
+    marginBottom: 12,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  itemImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 8,
   },
   itemHeader: {
     flexDirection: "row",

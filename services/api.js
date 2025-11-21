@@ -35,7 +35,11 @@ export const registerUser = async (userData) => {
       body: JSON.stringify({ ...userData, isAdmin: false }),
     });
 
+    console.log("res", response);
+
     const responseData = await response.json();
+
+    console.log("hhhhh", responseData);
 
     if (!response.ok) {
       throw new Error(responseData.error);
@@ -51,7 +55,7 @@ export const getDeliveryBoyItems = async (status) => {
   try {
     const userId = await AsyncStorage.getItem("userId");
     const response = await fetch(
-      `${API_BASE_URL}/delivery-boys/${userId}/items/${status.toLowerCase()}`,
+      `${API_BASE_URL}/delivery-boys/${userId}/items/${status}`,
       {
         headers: {
           Accept: "application/json",
@@ -60,11 +64,15 @@ export const getDeliveryBoyItems = async (status) => {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch items");
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch items");
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("getDeliveryBoyItems data:", data);
+    return data;
   } catch (error) {
+    console.error("getDeliveryBoyItems error:", error);
     throw error;
   }
 };
@@ -100,18 +108,22 @@ export const updateItemStatus = async (itemId, formData) => {
 
 export const getPendingItems = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}${ENDPOINTS.PENDING_ITEMS}`, {
+    const response = await fetch(`${API_BASE_URL}/delivery-items/pending`, {
       headers: {
         Accept: "application/json",
       },
     });
 
-    const responseData = await response.json();
     if (!response.ok) {
-      throw new Error(responseData.error);
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch pending items");
     }
-    return responseData;
+
+    const data = await response.json();
+    console.log("getPendingItems data:", data);
+    return data;
   } catch (error) {
+    console.error("getPendingItems error:", error);
     throw error;
   }
 };
@@ -197,6 +209,8 @@ export const createItem = async (formData) => {
       method: "POST",
       body: formData, // THIS IS THE CORRECT WAY TO SEND FormData
     });
+
+    console.log("api create res", response);
 
     const responseData = await response.json();
 
@@ -326,12 +340,18 @@ export const getItemsByStatus = async (status) => {
       }
     );
 
+    console.log("getItemsByStatus response", response);
+
     if (!response.ok) {
-      throw new Error("Failed to fetch items");
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch items");
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("getItemsByStatus data:", data);
+    return data;
   } catch (error) {
+    console.error("getItemsByStatus error:", error);
     throw error;
   }
 };

@@ -17,7 +17,10 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  console.log("hi");
+
   const handleRegister = async () => {
+    console.log("clicked");
     if (username.length < 1) {
       Alert.alert("Error", "Please enter a username");
       return;
@@ -37,12 +40,14 @@ const RegisterScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
-      await registerUser({
+      const response = await registerUser({
         username,
         password,
         confirmPassword,
         phoneNumber: phone,
       });
+
+      console.log("response", response);
       Alert.alert("Success", "Registration successful", [
         {
           text: "OK",

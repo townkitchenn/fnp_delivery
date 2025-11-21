@@ -27,6 +27,7 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await loginUser(username, password);
+      console.log("respo", response);
       await signIn(response); // Pass entire response to signIn
       // Navigation will be handled by AuthContext
     } catch (error) {

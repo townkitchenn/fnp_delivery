@@ -22,11 +22,14 @@ import { useAuth } from "../context/AuthContext";
 import { formatStatus } from "../utils/formatters";
 import { compressImage } from "../utils/imageUtils";
 import { ensureHttps } from "../utils/urlUtils";
+import { getImageSource } from "../utils/imageUtils";
 
 const ItemDetailScreen = ({ route, navigation }) => {
   const { item } = route.params;
   const { isAdmin } = useAuth();
   const [locationInfo, setLocationInfo] = useState(null);
+
+  console.log("ItemDetailScreen - Item received:", item);
 
   useEffect(() => {
     if (item.location) {
@@ -94,13 +97,6 @@ const ItemDetailScreen = ({ route, navigation }) => {
       Clipboard.setString(locationInfo.originalUrl);
       Alert.alert("Success", "Map URL copied to clipboard");
     }
-  };
-
-  const getImageUrl = () => {
-    if (item.image_url) return ensureHttps(item.image_url);
-    if (item.image_path)
-      return ensureHttps(`${API_BASE_URL}/${item.image_path}`);
-    return null;
   };
 
   const formatLocationDisplay = () => {
@@ -324,25 +320,51 @@ const ItemDetailScreen = ({ route, navigation }) => {
       if (item.delivered_image_url) {
         Alert.alert("Downloading...", "The image is being downloaded");
 
-        const secureUrl = ensureHttps(item.delivered_image_url);
-        const filename = secureUrl.split("/").pop();
-        const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+        let imageUri = item.delivered_image_url;
 
-        const downloadResult = await FileSystem.downloadAsync(
-          secureUrl,
-          fileUri
-        );
+        // Check if it's a Base64 data URI
+        if (imageUri.startsWith("data:image/")) {
+          // Extract the Base64 data from the data URI
+          const base64Data = imageUri.split(",")[1];
+          const mimeType = imageUri.split(";")[0].split(":")[1];
+          const fileExtension = mimeType.split("/")[1];
 
-        if (downloadResult.status !== 200) {
-          Alert.alert("Error", "Failed to download image");
-          return;
+          // Create a temporary file path
+          const filename = `delivery_proof_${Date.now()}.${fileExtension}`;
+          const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+          // Write the Base64 data to a temporary file
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          // Save to device's media library
+          const asset = await MediaLibrary.createAssetAsync(fileUri);
+          await MediaLibrary.createAlbumAsync("Delivery Proofs", asset, false);
+
+          Alert.alert("Success", "Image saved to your photos!");
+        } else {
+          // Handle regular HTTP URLs (existing logic)
+          const secureUrl = ensureHttps(item.delivered_image_url);
+          const filename = secureUrl.split("/").pop();
+          const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+          const downloadResult = await FileSystem.downloadAsync(
+            secureUrl,
+            fileUri
+          );
+
+          if (downloadResult.status !== 200) {
+            Alert.alert("Error", "Failed to download image");
+            return;
+          }
+
+          // Save to device's media library
+          const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+          await MediaLibrary.createAlbumAsync("Delivery Proofs", asset, false);
+
+          Alert.alert("Success", "Image saved to your photos!");
         }
-
-        // Save to device's media library
-        const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-        await MediaLibrary.createAlbumAsync("Delivery Proofs", asset, false);
-
-        Alert.alert("Success", "Image saved to your photos!");
       }
     } catch (error) {
       console.error("Download error:", error);
@@ -364,17 +386,15 @@ const ItemDetailScreen = ({ route, navigation }) => {
 
       <ScrollView style={styles.content}>
         <View style={styles.imageContainer}>
-          {getImageUrl() ? (
-            <Image
-              source={{ uri: getImageUrl() }}
-              style={styles.image}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={[styles.image, styles.placeholderContainer]}>
-              <FontAwesome name="image" size={50} color={COLORS.textLight} />
-              <Text style={styles.placeholderText}>No Image Available</Text>
-            </View>
+          {item.image_url && (
+            <>
+              {console.log("ItemDetailScreen - Image URL:", item.image_url)}
+              <Image
+                source={getImageSource(item.image_url)}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </>
           )}
         </View>
 
@@ -534,8 +554,12 @@ const ItemDetailScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             </View>
             <View style={styles.deliveredImageContainer}>
+              {console.log(
+                "ItemDetailScreen - Delivered Image URL:",
+                item.delivered_image_url
+              )}
               <Image
-                source={{ uri: ensureHttps(item.delivered_image_url) }}
+                source={getImageSource(item.delivered_image_url)}
                 style={styles.deliveredImage}
                 resizeMode="cover"
               />

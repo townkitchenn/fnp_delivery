@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // Initialize as boolean
 
   useEffect(() => {
     checkAuthState();
@@ -20,12 +20,15 @@ export const AuthProvider = ({ children }) => {
       const role = await AsyncStorage.getItem("role");
       const username = await AsyncStorage.getItem("username");
       const phoneNumber = await AsyncStorage.getItem("phoneNumber");
-      const isAdminStr = await AsyncStorage.getItem("isAdmin");
+      // No need to get 'isAdminStr' directly from storage if we derive it from 'role'
+      // const isAdminStr = await AsyncStorage.getItem("isAdmin"); // This line can be removed
+
       if (token) {
         setIsAuthenticated(true);
         setUserRole(role);
         setUserInfo({ username, phoneNumber });
-        setIsAdmin(isAdminStr === "1");
+        // Derive isAdmin directly from the stored role
+        setIsAdmin(role === "admin"); // Set isAdmin based on role string
       }
     } catch (error) {
       console.log("Error checking auth state:", error);
@@ -38,17 +41,24 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.setItem("token", userData.token);
       await AsyncStorage.setItem("userId", userData.userId);
-      await AsyncStorage.setItem("role", userData.role);
+      await AsyncStorage.setItem("role", userData.role); // Store the role string
       await AsyncStorage.setItem("username", userData.username);
       await AsyncStorage.setItem("phoneNumber", userData.phoneNumber);
-      await AsyncStorage.setItem("isAdmin", userData.isAdmin.toString());
+
+      // Derive isAdmin from userData.role and store as a string ("true" or "false")
+      await AsyncStorage.setItem(
+        "isAdmin",
+        userData.role === "admin" ? "true" : "false" // Store "true" or "false" string
+      );
 
       setUserInfo({
         username: userData.username,
         phoneNumber: userData.phoneNumber,
       });
       setIsAuthenticated(true);
-      setIsAdmin(userData.isAdmin === 1);
+      setUserRole(userData.role); // Update userRole state
+      // Derive isAdmin state directly from userData.role (which is a string from backend)
+      setIsAdmin(userData.role === "admin"); // Set isAdmin based on role string
     } catch (error) {
       console.log("Error storing user data:", error);
     }
@@ -61,9 +71,12 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.removeItem("role");
       await AsyncStorage.removeItem("username");
       await AsyncStorage.removeItem("phoneNumber");
+      await AsyncStorage.removeItem("isAdmin"); // Also remove isAdmin on sign out
+
       setIsAuthenticated(false);
       setUserRole(null);
       setUserInfo(null);
+      setIsAdmin(false); // Reset isAdmin state
     } catch (error) {
       console.log("Error signing out:", error);
     }
@@ -76,7 +89,7 @@ export const AuthProvider = ({ children }) => {
         isLoading,
         userRole,
         userInfo,
-        isAdmin,
+        isAdmin, // isAdmin is now a boolean
         signIn,
         signOut,
       }}

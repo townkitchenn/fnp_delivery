@@ -1,5 +1,5 @@
 // Use your computer's IP address instead of localhost
-export const API_BASE_URL = "https://pngfs.com/api"; // Replace X with your IP's last digit
+export const API_BASE_URL = "https://api-lphzyyzanq-uc.a.run.app/api"; // Replace X with your IP's last digit
 
 export const ENDPOINTS = {
   LOGIN: "/login",
