@@ -15,7 +15,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { formatStatus } from "../utils/formatters";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyListMessage from "../components/EmptyListMessage";
-import { getImageSource } from "../utils/imageUtils";
 
 const AdminItemList = ({ route, navigation }) => {
   const { status, isDeliveryBoy } = route.params;
@@ -256,6 +255,12 @@ const AdminItemList = ({ route, navigation }) => {
     </TouchableOpacity>
   );
 
+  // compute empty message depending on status
+  const emptyMessage =
+    status === "Pending"
+      ? `No ${activeTab.toLowerCase()} items`
+      : `No ${status.toLowerCase()} items`;
+
   return (
     <View style={globalStyles.screenContainer}>
       {loading ? (
@@ -321,10 +326,7 @@ const AdminItemList = ({ route, navigation }) => {
           )}
 
           {filteredItems.length === 0 ? (
-            <EmptyListMessage
-              message={`No ${activeTab.toLowerCase()} items`}
-              icon="list-alt"
-            />
+            <EmptyListMessage message={emptyMessage} icon="list-alt" />
           ) : (
             <FlatList
               data={filteredItems}
