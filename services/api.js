@@ -340,7 +340,7 @@ export const getItemsByStatus = async (status) => {
       }
     );
 
-    console.log("getItemsByStatus response", response);
+    // console.log("getItemsByStatus response", response);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -348,7 +348,7 @@ export const getItemsByStatus = async (status) => {
     }
 
     const data = await response.json();
-    console.log("getItemsByStatus data:", data);
+    // console.log("getItemsByStatus data:", data);
     return data;
   } catch (error) {
     console.error("getItemsByStatus error:", error);

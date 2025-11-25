@@ -126,9 +126,17 @@ const AddItemScreen = ({ route, navigation }) => {
   const handleSubmit = async () => {
     const trimmedName = formData.name.trim();
     const trimmedAddress = formData.address.trim();
+    const deliveryTimeValue = (formData.delivery_time || "").toString().trim();
 
-    if (trimmedName.length === 0 || trimmedAddress.length === 0) {
-      Alert.alert("Error", "Please fill name and address fields.");
+    if (
+      trimmedName.length === 0 ||
+      trimmedAddress.length === 0 ||
+      deliveryTimeValue.length === 0
+    ) {
+      Alert.alert(
+        "Error",
+        "Please fill name, address and delivery time fields."
+      );
       return;
     }
 
@@ -276,7 +284,7 @@ const AddItemScreen = ({ route, navigation }) => {
           />
         </View>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Delivery Time</Text>
+          <Text style={styles.label}>Delivery Time *</Text>
           <TouchableOpacity
             style={styles.datePickerButton}
             onPress={handleTimePress}
